@@ -6,7 +6,8 @@ const {
     GraphQLString,
     GraphQLSchema,
     GraphQLList,
-    GraphQLNonNull
+    GraphQLNonNull,
+    GraphQLEnumType
 } = require("graphql")
 
 // Client Type - an object or entity
@@ -31,7 +32,7 @@ const ProjectType = new GraphQLObjectType({
         // nested query - getting client of the project
         client: {
             type: ClientType,
-            resolve(parent, args){ // parent is project here
+            resolve(parent, args) { // parent is project here
                 return Client.findById(parent.clientId);
             }
         }
@@ -85,12 +86,12 @@ const mutation = new GraphQLObjectType({
             type: ClientType,
             // input agruments
             args: {
-                name: { type: GraphQLNonNull(GraphQLString)},
-                email: { type: GraphQLNonNull(GraphQLString)},
-                phone: { type: GraphQLNonNull(GraphQLString)},
+                name: { type: GraphQLNonNull(GraphQLString) },
+                email: { type: GraphQLNonNull(GraphQLString), isUnique: true },
+                phone: { type: GraphQLNonNull(GraphQLString) },
             },
             // saving client to DB
-            async resolve(parent,args){
+            async resolve(parent, args) {
                 // Check if the email is already in use ---!!!
                 const client = new Client({
                     name: args.name,
@@ -107,13 +108,100 @@ const mutation = new GraphQLObjectType({
             type: ClientType,
             // input agruments
             args: {
-                id: { type: GraphQLNonNull(GraphQLID)},
+                id: { type: GraphQLNonNull(GraphQLID) },
             },
             // removing client from DB
-            resolve(parent,args){
+            resolve(parent, args) {
+                // delete all the projects related to that client ---!!!
                 return Client.findByIdAndRemove(args.id);
             },
         },
+
+
+        // Add a project
+        addProject: {
+            type: ProjectType,
+            // input arguments
+            args: {
+                name: { type: GraphQLNonNull(GraphQLString) },
+                description: { type: GraphQLNonNull(GraphQLString) },
+                status: {
+                    // Enum - specific values
+                    type: new GraphQLEnumType({
+                        name: "ProjectStatus",
+                        values: {
+                            // used at the time of query like, status:new
+                            new: { value: "Not Started" },
+                            progress: { value: "In Progress" },
+                            completed: { value: "Completed" },
+                        },
+                    }),
+                    defaultValue: "Not Started"
+                },
+                clientId: { type: GraphQLNonNull(GraphQLID) },
+            },
+            resolve(parent, args) {
+                // add project to DB
+                const project = new Project({
+                    name: args.name,
+                    description: args.description,
+                    status: args.status,
+                    clientId: args.clientId,
+                });
+                return project.save();
+            }
+        },
+
+
+        // Delete a project
+        deleteProject: {
+            type: ProjectType,
+            // input agruments
+            args: {
+                id: { type: GraphQLNonNull(GraphQLID) },
+            },
+            // removing Project from DB
+            resolve(parent, args) {
+                return Project.findByIdAndRemove(args.id);
+            },
+        },
+
+
+        // Update a project
+        updateProject: {
+            type: ProjectType,
+            args: {
+                id: { type: GraphQLNonNull(GraphQLID) },
+                // name, desc and status can be null during update
+                name: { type: GraphQLString },
+                description: { type: GraphQLString },
+                status: {
+                    // Enum - specific values
+                    type: new GraphQLEnumType({
+                        // IMP - the name has to be unique
+                        name: "ProjectStatusUpdate",
+                        values: {
+                            // used at the time of query like, status:completed
+                            new: { value: "Not Started" },
+                            progress: { value: "In Progress" },
+                            completed: { value: "Completed" },
+                        },
+                    }),
+                },
+            },
+            resolve(parent, args) {
+                return Project.findByIdAndUpdate(args.id, {
+                    $set: {
+                        name: args.name,
+                        description: args.description,
+                        status: args.status,
+                    }
+                }, { new: true })
+            }
+
+        },
+
+
     }
 })
 

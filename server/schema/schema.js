@@ -5,7 +5,8 @@ const {
     GraphQLID,
     GraphQLString,
     GraphQLSchema,
-    GraphQLList
+    GraphQLList,
+    GraphQLNonNull
 } = require("graphql")
 
 // Client Type - an object or entity
@@ -27,6 +28,7 @@ const ProjectType = new GraphQLObjectType({
         name: { type: GraphQLString },
         description: { type: GraphQLString },
         status: { type: GraphQLString },
+        // nested query - getting client of the project
         client: {
             type: ClientType,
             resolve(parent, args){ // parent is project here
@@ -73,6 +75,49 @@ const RootQuery = new GraphQLObjectType({
     }
 });
 
+
+// Mutations
+const mutation = new GraphQLObjectType({
+    name: "Mutation",
+    fields: {
+        // Add a client
+        addClient: {
+            type: ClientType,
+            // input agruments
+            args: {
+                name: { type: GraphQLNonNull(GraphQLString)},
+                email: { type: GraphQLNonNull(GraphQLString)},
+                phone: { type: GraphQLNonNull(GraphQLString)},
+            },
+            // saving client to DB
+            async resolve(parent,args){
+                // Check if the email is already in use ---!!!
+                const client = new Client({
+                    name: args.name,
+                    email: args.email,
+                    phone: args.phone,
+                });
+                return await client.save();
+            },
+        },
+
+
+        // Delete a client
+        deleteClient: {
+            type: ClientType,
+            // input agruments
+            args: {
+                id: { type: GraphQLNonNull(GraphQLID)},
+            },
+            // removing client from DB
+            resolve(parent,args){
+                return Client.findByIdAndRemove(args.id);
+            },
+        },
+    }
+})
+
 module.exports = new GraphQLSchema({
-    query: RootQuery
+    query: RootQuery,
+    mutation
 })

@@ -54,14 +54,14 @@ const RootQuery = new GraphQLObjectType({
                 return clients.find(client => client.id === args.id);
             }
         },
-        // to get all clients
+        // to get all projects
         projects: {
             type: GraphQLList(ProjectType),
             resolve(parent, args) {
                 return projects;
             }
         },
-        // to get client based on id
+        // to get project based on id
         project: {
             type: ProjectType,
             args: { id: { type: GraphQLID } },

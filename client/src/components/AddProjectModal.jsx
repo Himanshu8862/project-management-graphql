@@ -2,6 +2,7 @@ import { useState } from "react"
 import { FaList } from "react-icons/fa"
 import { useMutation, useQuery } from "@apollo/client"
 import { GET_PROJECTS } from "../queires/projectQueries"
+import { ADD_PROJECT } from "../mutations/projectMutations"
 import { GET_CLIENTS } from "../queires/clientQueries"
 import Spinner from "./Spinner"
 
@@ -10,6 +11,21 @@ export default function AddProjectModal() {
     const [description, setDescription] = useState("")
     const [clientId, setClientId] = useState("")
     const [status, setStatus] = useState("new") // key of enum for status which corresponds to Not Started
+
+    const [addProject] = useMutation(ADD_PROJECT, {
+        variables: { name, description, status, clientId },
+        update(cache, { data: { addProject } }) {
+            const { projects } = cache.readQuery({
+                query: GET_PROJECTS
+            });
+            cache.writeQuery({
+                query: GET_PROJECTS,
+                data: {
+                    projects: [...projects, addProject]
+                }
+            })
+        }
+    })
 
 
     // Get Clients for select
@@ -20,13 +36,14 @@ export default function AddProjectModal() {
         if (name === '' || description === '' || status === '') {
             return alert('Please fill in all fields');
         }
+        addProject(name, description, status, clientId)
         setName('');
         setDescription('');
         setStatus('new');
         setClientId('')
     }
 
-    if (loading) return <Spinner />
+    if (loading) return null
     if (error) return <p>Something Went Wrong...</p>
 
     return (
@@ -53,6 +70,7 @@ export default function AddProjectModal() {
                                             <input type="text"
                                                 className="form-control"
                                                 id="name"
+                                                required
                                                 value={name}
                                                 onChange={(e) => setName(e.target.value)}
                                             />
@@ -60,6 +78,7 @@ export default function AddProjectModal() {
                                         <div className="mb-3">
                                             <label className="form-label">Description</label>
                                             <textarea
+                                                required
                                                 className="form-control"
                                                 id="description"
                                                 value={description}
@@ -75,9 +94,9 @@ export default function AddProjectModal() {
                                                 value={status}
                                                 onChange={(e) => setStatus(e.target.value)}
                                             >
-                                                <option value="new" >Not Started</option>
-                                                <option value="progess" >In Progress</option>
-                                                <option value="completed" >Completed</option>
+                                                <option value="new">Not Started</option>
+                                                <option value="progress">In Progress</option>
+                                                <option value="completed">Completed</option>
                                             </select>
                                         </div>
 
@@ -90,7 +109,7 @@ export default function AddProjectModal() {
                                                 onChange={(e) => setClientId(e.target.value)}
                                             >
                                                 <option value="">Select Client</option>
-                                                {data.clients.map(client=> (
+                                                {data.clients.map(client => (
                                                     <option key={client.id} value={client.id}>{client.name}</option>
                                                 ))}
                                             </select>

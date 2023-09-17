@@ -2,26 +2,29 @@ import { FaTrash } from "react-icons/fa"
 import { useMutation } from "@apollo/client"
 import { DELETE_CLIENT } from "../mutations/clientMutations";
 import { GET_CLIENTS } from "../queires/clientQueries";
+import { GET_PROJECTS } from "../queires/projectQueries";
 
 export default function ClientRow({ client }) {
     const [deleteClient] = useMutation(DELETE_CLIENT, {
         variables: { id: client.id },
-        // now to update the table, onew way is to refetch the clients
-        // refetchQueries: [{ query: GET_CLIENTS }],
 
-        // 2nd way is to update the cache with the data returned from the delete mutation
-        update(cache, { data: { deleteClient } }) {
-            // read the data from the cache wihtout making a new request
-            const { clients } = cache.readQuery({
-                query: GET_CLIENTS
-            });
-            cache.writeQuery({
-                query: GET_CLIENTS,
-                data: {
-                    clients: clients.filter(client => client.id !== deleteClient.id)
-                },
-            });
-        }
+        // refetch clients and projects, as projects related to client is also deleted
+        refetchQueries: [
+            { query: GET_CLIENTS },
+            { query: GET_PROJECTS }
+        ],
+
+        // update(cache, { data: { deleteClient } }) {
+        //     const { clients } = cache.readQuery({
+        //         query: GET_CLIENTS
+        //     });
+        //     cache.writeQuery({
+        //         query: GET_CLIENTS,
+        //         data: {
+        //             clients: clients.filter(client => client.id !== deleteClient.id)
+        //         },
+        //     });
+        // }
     });
 
     return (

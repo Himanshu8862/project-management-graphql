@@ -92,7 +92,7 @@ const mutation = new GraphQLObjectType({
             },
             // saving client to DB
             async resolve(parent, args) {
-                // Check if the email is already in use ---!!!
+                // Check if the email is already in use - done at db level
                 const client = new Client({
                     name: args.name,
                     email: args.email,
@@ -112,7 +112,13 @@ const mutation = new GraphQLObjectType({
             },
             // removing client from DB
             resolve(parent, args) {
-                // delete all the projects related to that client ---!!!
+                // delete all the projects related to that client
+                Project.find({ clientId: args.id })
+                    .then((projects) => {
+                        projects.forEach(project => {
+                            project.deleteOne();
+                        });
+                    });
                 return Client.findByIdAndRemove(args.id);
             },
         },
